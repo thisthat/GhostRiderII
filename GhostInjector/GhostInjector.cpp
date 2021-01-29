@@ -75,7 +75,6 @@ void inject(int pid, const std::wstring& dll_path) {
 
 	CloseHandle(thread);
 	CloseHandle(game_handle);
-	std::cout << "Injected inside process id " << pid ;
 }
 
 int main(int argc, char **argv)
@@ -90,7 +89,7 @@ int main(int argc, char **argv)
     if (pid > 0) {
 		std::wstring l_dll_path = std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(dll_path);
         inject(pid, l_dll_path);
-		std::cout << "Injected: " << dll_path << "\n";
+		std::cout << "Injected: " << dll_path << "\nProcess ID:" << pid << "\n";
     }
 }
 

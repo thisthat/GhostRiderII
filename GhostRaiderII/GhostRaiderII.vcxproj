@@ -21,10 +21,15 @@
   <ItemGroup>
     <ClInclude Include="console.h" />
     <ClInclude Include="DataStruct.h" />
+    <ClInclude Include="Ghost.h" />
+    <ClInclude Include="MinHookWrapper.h" />
+    <ClInclude Include="Offsets.h" />
+    <ClInclude Include="Serializer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="console.cpp" />
     <ClCompile Include="GhostRaiderII.cpp" />
+    <ClCompile Include="Serializer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

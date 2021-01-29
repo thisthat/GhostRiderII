@@ -65,8 +65,6 @@ struct small_ivec3
 	}
 };
 
-
-
 struct Entity
 {
 	int32_t floor_y;			// 0x0
