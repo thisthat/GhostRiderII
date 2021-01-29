@@ -24,30 +24,48 @@ render_lara_t renderLara = NULL;
 constexpr uintptr_t loadLevelFuncAddr = Offsets::GOG_UK::loadLevelFunc;
 constexpr uintptr_t renderLaraFuncAddr = Offsets::GOG_UK::renderLaraFunc;
 
-
-std::string dll_base_path;
-unsigned long long int nFrame = 0;
-
 Serializer serializer;
 
-void* hk_load_level(int32_t a1, int32_t a2) {
-    println(color::cyan, "Level %d - %d loaded", a1, a2);
-    serializer.open_read();
-    nFrame = 0;
-    return loadLevel(a1, a2);
-}
-
-int32_t hk_render_lara(Entity* lara) {
+int32_t hk_render_lara_reproduce(Entity* lara) {
     // Render original
-    nFrame++;
     int32_t res = renderLara(lara);
-    //serializer.serialize(lara, nFrame);
+    // Render ghost
     struct Entity* newLara = (Entity*)malloc(sizeof(Entity));
     if (serializer.read(newLara, lara)) {
         renderLara(newLara);
     }
     return res;
-    //return renderLara(newLara);
+}
+
+int32_t hk_render_lara_write(Entity* lara) {
+    // Render original
+    int32_t res = renderLara(lara);
+    // Store data
+    serializer.serialize(lara);
+    return res;
+}
+
+void* hk_load_level(int32_t a1, int32_t a2) {
+    println(color::cyan, "Level %d - %d loaded", a1, a2);
+    serializer.init();
+    // patch memory
+    if (!unhook_fn(renderLaraFuncAddr)) {
+        println(color::red, "Failed to unhook renderLara");
+    }
+    if (serializer.isWrite()) {
+        if (!hook_fn(hk_render_lara_write, renderLaraFuncAddr, &renderLara)) {
+            println(color::red, "Failed to hook renderLara");
+        }
+    }
+    else {
+        if (!hook_fn(hk_render_lara_reproduce, renderLaraFuncAddr, &renderLara)) {
+            println(color::red, "Failed to hook renderLara");
+        }
+    }
+    if (serializer.isRead()) {
+        serializer.open_read();
+    }
+    return loadLevel(a1, a2);
 }
 
 
@@ -61,25 +79,20 @@ int main_th()
         return 1;
     }
 
-    char path[_MAX_PATH + 1];
-    GetModuleFileNameA(NULL, path, _MAX_PATH);
-    std::string str = std::string(path);
-    dll_base_path = str.substr(0, str.find_last_of("\\/") + 1);
-    println(color::blue, dll_base_path.c_str());
-
     // Create a hook for MessageBoxW, in disabled state.
     if (!hook_fn(hk_load_level, loadLevelFuncAddr, &loadLevel)) {
         println(color::red, "Failed to hook loadLevel");
     }
 
-    if (!hook_fn(hk_render_lara, renderLaraFuncAddr, &renderLara)) {
+    // Default hook
+    if (!hook_fn(hk_render_lara_reproduce, renderLaraFuncAddr, &renderLara)) {
         println(color::red, "Failed to hook renderLara");
-    }
+    } 
 
     DWORD* BaseAddress = (DWORD*)GetModuleHandle(NULL);
     DWORD* isMenu = (DWORD*)((char*)BaseAddress + Offsets::GOG_UK::title);
     while (true) {
-        //serializer.is_menu(*isMenu);
+        serializer.is_menu(*isMenu);
         std::this_thread::sleep_for(std::chrono::microseconds(7812));
     }
 

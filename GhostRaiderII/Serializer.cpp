@@ -7,26 +7,48 @@
 #include "console.h"
 #include "Serializer.h"
 
-// write in memory
-
-
 Serializer::Serializer() {
     laras.reserve(MAX_LARAS);
 }
 
+void Serializer::init() {
+    _conf.init();
+}
+
+bool Serializer::isWrite() {
+    return _conf.getMode() == SerializerMode::write;
+}
+
+bool Serializer::isRead() {
+    return !this->isWrite();
+}
+
+
+bool finish_read = false;
 void Serializer::open_read() {
     FILE* file;
-    fopen_s(&file, "F:\\obs\\output.tr2", "rb");
+    fopen_s(&file, _conf.getDataPath().c_str(), "rb");
     _index = 0;
     long elm;
-    fread((char*)&elm, sizeof(elm), 1, file);
-    laras.resize(elm);
-    long long int size = elm * (long long int) sizeof(Ghost);
-    fread(&laras[0], 1, size, file);
+    if (file != NULL) {
+        fread((char*)&elm, sizeof(elm), 1, file);
+        laras.resize(elm);
+        size_t size = elm * sizeof(Ghost);
+        fread(&laras[0], 1, size, file);
+        finish_read = false;
+        fclose(file);
+    }
+    else {
+        println(color::dark_yellow, "CANNOT READ: %s", _conf.getDataPath().c_str());
+    }
 }
 
 bool Serializer::read(Entity* newLara, Entity* lara) {
     if (_index >= laras.size()) {
+        if (!finish_read) {
+            println(color::cyan, "Finish reproducing ghost");
+        }
+        finish_read = true;
         return false;
     }
     Ghost g = laras.at(_index++);
@@ -46,34 +68,39 @@ bool Serializer::read(Entity* newLara, Entity* lara) {
     newLara->pad3 = lara->pad3;
     newLara->parent = lara->parent;
     newLara->ai_manager = lara->ai_manager;
-    newLara->position = ivec3(g.position.x, g.position.y, g.position.z);
-    newLara->rotation = small_ivec3(g.rotation.x, g.rotation.y, g.rotation.z);
+    newLara->position = ivec3(g.p_x, g.p_y, g.p_z);
+    newLara->rotation = small_ivec3(g.r_x, g.r_y, g.r_z);
     newLara->flags = 0;
     return true;
 }
 
 void Serializer::close() {
     long elm = laras.size();
-    long long int size = elm * (long long int) sizeof(Ghost);
+    size_t size = elm * sizeof(Ghost);
     println(color::dark_yellow, "Storing %d", laras.size());
     FILE* file;
     errno_t err;
-    if ((err = fopen_s(&file, "F:\\obs\\output.tr2", "w+b")) != 0) {
+    if ((err = fopen_s(&file, _conf.getDataPath().c_str(), "w+b")) != 0) {
         println(color::dark_yellow, "CANNOT WRITE: %s", strerror(err));
         return;
     }
-    fwrite(&elm, sizeof(elm), 1, file);
-    fwrite(&laras[0], 1, size, file);
-    fclose(file);
+    if (file != NULL) {
+        fwrite(&elm, sizeof(elm), 1, file);
+        fwrite(&laras[0], 1, size, file);
+        fclose(file);
+    }
     println(color::dark_yellow, "File wrote (%d B)", size);
 }
 
-void Serializer::serialize(Entity* lara, int frame) {
+void Serializer::serialize(Entity* lara) {
     struct Ghost* ghostyLara = (Ghost*)malloc(sizeof(Ghost));
-    ghostyLara->position = lara->position;
-    ghostyLara->rotation = lara->rotation;
+    ghostyLara->p_x = lara->position.x;
+    ghostyLara->p_y = lara->position.y;
+    ghostyLara->p_z = lara->position.z;
+    ghostyLara->r_x = lara->rotation.x;
+    ghostyLara->r_y = lara->rotation.y;
+    ghostyLara->r_z = lara->rotation.z;
     laras.push_back(*ghostyLara);
-    println(color::purple, "%d - %d / %d", frame, laras.size(), laras.capacity());
 }
 
 
@@ -85,6 +112,8 @@ void Serializer::is_menu(DWORD isMenu) {
     if (!_isMenu && isMenu == 1) {
         println(color::dark_yellow, "%d - %d", isMenu, _isMenu);
         _isMenu = true;
-        this->close();
+        if (this->isWrite()) {
+            this->close();
+        }
     }
 }
