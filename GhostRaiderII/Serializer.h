@@ -8,17 +8,17 @@
 
 class Serializer {
 private:
-    FILE* fd = NULL;
-    long MAX_LARAS = 1024;
+    long MAX_LARAS = 1024*1024;
     std::vector<Ghost> laras;
     bool _isMenu = true;
+    long long int _index = 0;
 
 public:
     Serializer();
     void open_read();
     void close();
     void serialize(Entity* lara, int frame);
-    Entity* read();
+    bool read(Entity* newLara, Entity* oldLara);
     void is_menu(DWORD isMenu);
 };
 

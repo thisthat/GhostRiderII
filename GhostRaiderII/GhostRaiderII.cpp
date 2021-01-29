@@ -32,6 +32,7 @@ Serializer serializer;
 
 void* hk_load_level(int32_t a1, int32_t a2) {
     println(color::cyan, "Level %d - %d loaded", a1, a2);
+    serializer.open_read();
     nFrame = 0;
     return loadLevel(a1, a2);
 }
@@ -40,28 +41,11 @@ int32_t hk_render_lara(Entity* lara) {
     // Render original
     nFrame++;
     int32_t res = renderLara(lara);
-    serializer.serialize(lara, nFrame);
-    // Render Ghost
-    //struct Entity* newLara = (Entity*)malloc(sizeof(Entity));
-    //newLara->floor_y = lara->floor_y;
-    //newLara->mesh_bits = lara->mesh_bits;
-    //newLara->model = lara->model;
-    //newLara->anim_id = 0;
-    //newLara->anim_frame = 0;
-    //newLara->room_id = lara->room_id;
-    //newLara->room_unk_data = lara->room_unk_data;
-    //newLara->interactive_id = lara->interactive_id;
-    //newLara->xz_velocity = lara->xz_velocity;
-    //newLara->y_velocity = lara->y_velocity;
-    //newLara->health = lara->health;
-    //newLara->activation_flags = 0;
-    //newLara->intensity = 0;
-    //newLara->pad3 = lara->pad3;
-    //newLara->parent = lara->parent;
-    //newLara->ai_manager = lara->ai_manager;
-    //newLara->position = ivec3(lara->position.x, lara->position.y, lara->position.z);
-    //newLara->rotation = small_ivec3(lara->rotation.x, lara->rotation.y, lara->rotation.z);
-    //newLara->flags = 0;
+    //serializer.serialize(lara, nFrame);
+    struct Entity* newLara = (Entity*)malloc(sizeof(Entity));
+    if (serializer.read(newLara, lara)) {
+        renderLara(newLara);
+    }
     return res;
     //return renderLara(newLara);
 }
@@ -95,7 +79,7 @@ int main_th()
     DWORD* BaseAddress = (DWORD*)GetModuleHandle(NULL);
     DWORD* isMenu = (DWORD*)((char*)BaseAddress + Offsets::GOG_UK::title);
     while (true) {
-        serializer.is_menu(*isMenu);
+        //serializer.is_menu(*isMenu);
         std::this_thread::sleep_for(std::chrono::microseconds(7812));
     }
 
