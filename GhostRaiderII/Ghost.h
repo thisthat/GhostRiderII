@@ -3,6 +3,6 @@
 #include "DataStruct.h"
 
 struct Ghost {
-	ivec3 position;
-	small_ivec3 rotation;
+	int32_t p_x, p_y, p_z;
+	uint16_t r_x, r_y, r_z;
 };
