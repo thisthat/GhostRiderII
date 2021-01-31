@@ -27,7 +27,7 @@ int get_tomb_id() {
     return -1;
 }
 
-void inject(int pid, const std::wstring& dll_path) {
+int inject(int pid, const std::wstring& dll_path) {
 	HANDLE token;
 	TOKEN_PRIVILEGES tkp;
 
@@ -46,25 +46,25 @@ void inject(int pid, const std::wstring& dll_path) {
 
 	if (!game_handle || game_handle == INVALID_HANDLE_VALUE) {
 		std::cout << "Error while opening the process\n";
-		return;
+		return 2;
 	}
 	auto allocated_mem = VirtualAllocEx(game_handle, nullptr, dll_size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 
 	if (!allocated_mem) {
 		std::cout << "Error while allocating memory\n";
-		return;
+		return 3;
 	}
 
 	if (!WriteProcessMemory(game_handle, allocated_mem, dll_path.c_str(), dll_size, 0)) {
 		std::cout << "Error while writing on the allocated memory\n";
-		return;
+		return 4;
 	}
 
 	HANDLE thread = CreateRemoteThread(game_handle, nullptr, 0, (LPTHREAD_START_ROUTINE)GetProcAddress(LoadLibrary(L"kernel32.dll"), "LoadLibraryW"), allocated_mem, 0, nullptr);
 
 	if (!thread) {
 		std::cout << "Error while creating the listenign library thread\n";
-		return;
+		return 5;
 	}
 
 	WaitForSingleObject(thread, INFINITE);
@@ -75,6 +75,7 @@ void inject(int pid, const std::wstring& dll_path) {
 
 	CloseHandle(thread);
 	CloseHandle(game_handle);
+	return ret;
 }
 
 int main(int argc, char **argv)
@@ -84,22 +85,13 @@ int main(int argc, char **argv)
 	std::string str = std::string(path);
 	std::string base_path = str.substr(0, str.find_last_of("\\/") + 1);
 	
-    const auto dll_path =  base_path + "\GhostRaiderII.dll";
+    const auto dll_path =  base_path + "\\GhostRaiderII.dll";
     int pid = get_tomb_id();
     if (pid > 0) {
 		std::wstring l_dll_path = std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(dll_path);
-        inject(pid, l_dll_path);
+        int exit = inject(pid, l_dll_path);
 		std::cout << "Injected: " << dll_path << "\nProcess ID:" << pid << "\n";
+		return exit;
     }
+	return 1;
 }
-
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file

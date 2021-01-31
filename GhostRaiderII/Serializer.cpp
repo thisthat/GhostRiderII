@@ -9,10 +9,17 @@
 
 Serializer::Serializer() {
     laras.reserve(MAX_LARAS);
+    _level_id = 0;
 }
 
-void Serializer::init() {
+void Serializer::init(int32_t level_id) {
     _conf.init();
+    _isInit = true;
+    _level_id = level_id;
+}
+
+bool Serializer::isInit() {
+    return _isInit;
 }
 
 bool Serializer::isWrite() {
@@ -27,7 +34,7 @@ bool Serializer::isRead() {
 bool finish_read = false;
 void Serializer::open_read() {
     FILE* file;
-    fopen_s(&file, _conf.getDataPath().c_str(), "rb");
+    fopen_s(&file, _getFileName().c_str(), "rb");
     _index = 0;
     long elm;
     if (file != NULL) {
@@ -39,7 +46,7 @@ void Serializer::open_read() {
         fclose(file);
     }
     else {
-        println(color::dark_yellow, "CANNOT READ: %s", _conf.getDataPath().c_str());
+        println(color::dark_yellow, "CANNOT READ: %s", _getFileName().c_str());
     }
 }
 
@@ -75,13 +82,14 @@ bool Serializer::read(Entity* newLara, Entity* lara) {
 }
 
 void Serializer::close() {
+    if (isRead()) return;
     long elm = laras.size();
     size_t size = elm * sizeof(Ghost);
     println(color::dark_yellow, "Storing %d", laras.size());
     FILE* file;
     errno_t err;
-    if ((err = fopen_s(&file, _conf.getDataPath().c_str(), "w+b")) != 0) {
-        println(color::dark_yellow, "CANNOT WRITE: %s", strerror(err));
+    if ((err = fopen_s(&file, _getFileName().c_str(), "w+b")) != 0) {
+        println(color::dark_yellow, "CANNOT WRITE: %s :: %s", _getFileName().c_str(), strerror(err));
         return;
     }
     if (file != NULL) {
@@ -89,7 +97,7 @@ void Serializer::close() {
         fwrite(&laras[0], 1, size, file);
         fclose(file);
     }
-    println(color::dark_yellow, "File wrote (%d B)", size);
+    println(color::dark_yellow, "Wrote %d KB", size/1024);
 }
 
 void Serializer::serialize(Entity* lara) {
