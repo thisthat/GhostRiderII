@@ -45,9 +45,12 @@ int32_t hk_render_lara_write(Entity* lara) {
     return res;
 }
 
-void* hk_load_level(int32_t a1, int32_t a2) {
-    println(color::cyan, "Level %d - %d loaded", a1, a2);
-    serializer.init();
+void* hk_load_level(int32_t level_id, int32_t a2) {
+    println(color::cyan, "Level %d - %d loaded", level_id, a2);
+    if (serializer.isInit()) {
+        serializer.close();
+    }
+    serializer.init(level_id);
     // patch memory
     if (!unhook_fn(renderLaraFuncAddr)) {
         println(color::red, "Failed to unhook renderLara");
@@ -65,7 +68,7 @@ void* hk_load_level(int32_t a1, int32_t a2) {
     if (serializer.isRead()) {
         serializer.open_read();
     }
-    return loadLevel(a1, a2);
+    return loadLevel(level_id, a2);
 }
 
 

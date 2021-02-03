@@ -35,6 +35,7 @@ public:
         }
         std::getline(file, _path);
         println(color::white, "[path] %s", _path.c_str());
+        
     };
     SerializerMode getMode() {
         return _mode;
@@ -51,10 +52,16 @@ private:
     bool _isMenu = true;
     size_t _index = 0;
     SerializerConf _conf;
+    bool _isInit = false;
+    int32_t _level_id = 0;
+
+    std::string _getFileName() {
+        return _conf.getDataPath() + std::to_string(_level_id) + ".tr2";
+    };
 
 public:
     Serializer();
-    void init();
+    void init(int32_t level_id);
     void open_read();
     void close();
     void serialize(Entity* lara);
@@ -62,4 +69,5 @@ public:
     void is_menu(DWORD isMenu);
     bool isWrite();
     bool isRead();
+    bool isInit();
 };
