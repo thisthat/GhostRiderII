@@ -21,8 +21,10 @@ using render_lara_t = int32_t(*)(Entity*);
 load_level_t loadLevel = NULL;
 render_lara_t renderLara = NULL;
 
-constexpr uintptr_t loadLevelFuncAddr = Offsets::GOG_UK::loadLevelFunc;
-constexpr uintptr_t renderLaraFuncAddr = Offsets::GOG_UK::renderLaraFunc;
+DWORD *baseAddress;
+uintptr_t loadLevelFuncAddr;
+uintptr_t renderLaraFuncAddr;
+uintptr_t titleScreen;
 
 Serializer serializer;
 
@@ -82,6 +84,37 @@ int main_th()
         return 1;
     }
 
+    // Resolve offsets
+    baseAddress = (DWORD*)GetModuleHandle(NULL);
+    if (Offsets::isMulti(baseAddress)) {
+        println(color::dark_green, "Identified Multipatch");
+        loadLevelFuncAddr = Offsets::MULTI::loadLevelFunc;
+        renderLaraFuncAddr = Offsets::MULTI::renderLaraFunc;
+        titleScreen = Offsets::MULTI::title;
+    }
+    else if (Offsets::isEPC(baseAddress)) {
+        println(color::dark_green, "Identified Eidos Premier Collection");
+        loadLevelFuncAddr = Offsets::EPC::loadLevelFunc;
+        renderLaraFuncAddr = Offsets::EPC::renderLaraFunc;
+        titleScreen = Offsets::EPC::title;
+    }
+    else if (Offsets::isUK(baseAddress)) {
+        println(color::dark_green, "Identified UK Box"); 
+        loadLevelFuncAddr = Offsets::UK::loadLevelFunc;
+        renderLaraFuncAddr = Offsets::UK::renderLaraFunc;
+        titleScreen = Offsets::UK::title;
+    }
+    else if (Offsets::isPatched(baseAddress)) {
+        println(color::dark_green, "Identified CORE's Patch 1");
+        loadLevelFuncAddr = Offsets::PATCH::loadLevelFunc;
+        renderLaraFuncAddr = Offsets::PATCH::renderLaraFunc;
+        titleScreen = Offsets::PATCH::title;
+    }
+    else {
+        println(color::red, "Something is off");
+        return 2;
+    }
+
     // Create a hook for MessageBoxW, in disabled state.
     if (!hook_fn(hk_load_level, loadLevelFuncAddr, &loadLevel)) {
         println(color::red, "Failed to hook loadLevel");
@@ -92,8 +125,8 @@ int main_th()
         println(color::red, "Failed to hook renderLara");
     } 
 
-    DWORD* BaseAddress = (DWORD*)GetModuleHandle(NULL);
-    DWORD* isMenu = (DWORD*)((char*)BaseAddress + Offsets::GOG_UK::title);
+    
+    DWORD* isMenu = (DWORD*)((char*)baseAddress + titleScreen);
     while (true) {
         serializer.is_menu(*isMenu);
         std::this_thread::sleep_for(std::chrono::microseconds(7812));
